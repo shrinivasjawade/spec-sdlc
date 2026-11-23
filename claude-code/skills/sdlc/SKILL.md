@@ -44,7 +44,9 @@ Current state:
    request and the slug.
 2. If it reports open questions, ask the user (AskUserQuestion, up to 4 at a
    time), then delegate again so the analyst updates the document with the answers.
-3. **GATE 1**: summarise the user stories and ask for approval.
+3. Run `bash .claude/scripts/sdlc.sh ready` (Definition of Ready: acceptance criteria
+   present, open questions resolved, problem/goal stated). **GATE 1**: summarise the
+   user stories and the readiness result and ask for approval.
    On approve: `bash .claude/scripts/sdlc.sh phase design`.
 
 ## Step 2 - Design  (phase: design)
@@ -72,9 +74,8 @@ Current state:
 
 ## Step 5 - Review  (phase: review)
 1. `bash .claude/scripts/sdlc.sh phase review`
-2. Run `bash .claude/scripts/sdlc.sh verify` (contract check) and
-   `bash .claude/scripts/sdlc.sh metrics` (governance scorecard); fold the results
-   into the gate summary.
+2. Run `bash .claude/scripts/sdlc.sh verify` (contract), `metrics` (scorecard) and
+   `deps` (dependency / supply-chain scan); fold the results into the gate summary.
 3. Delegate to **code-reviewer**, **security-auditor** AND **verifier** in parallel
    (three Agent calls in the same message), each with the slug. The verifier runs
    independently (fresh context) and checks the implementation against the spec.
@@ -90,6 +91,16 @@ Current state:
 2. On approve: `bash .claude/scripts/sdlc.sh phase release`, then delegate to the
    **release-manager** subagent with the slug.
 3. `bash .claude/scripts/sdlc.sh finish`
+
+## Step 7 - Maintain  (phase: maintain)
+After release the feature is maintained, not forgotten. When a production problem appears:
+1. `bash .claude/scripts/sdlc.sh switch <slug>` then `phase maintain`.
+2. Diagnose read-only and record `docs/sdlc/<slug>/07-incident.md` from
+   `sdlc/templates/incident.md` (impact, detection, tiered response, root cause).
+3. Turn the fix into a **spec change** (new/changed `AC-*` + a test) so it cannot
+   recur — this re-enters the pipeline at the right gate (change control). Record the
+   lesson in `sdlc/lessons.md` and promote recurring ones to `sdlc/patterns.md`.
+4. A human ships the fix; the agent proposes, it never deploys.
 
 ## Final report to the user
 - What was built (3 to 5 bullets)

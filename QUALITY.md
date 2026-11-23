@@ -22,18 +22,33 @@ it still has gaps, using the literature's own criteria.
 | **When is SDD worth the overhead?** — decision framework (2602.00180) | CLAUDE.md notes small fixes skip the pipeline; `PROCESS.md` now carries a short "When to use" guide and the three rigor levels. | **Light** — guidance added, not a formal scorer. |
 | **Visualization / legibility for non-experts** (not emphasized in the papers) | A dependency-free `sdlc/dashboard/` pipeline map, auto-generated per feature with a live governance scorecard. | **Beyond the literature.** |
 
-## Honest gaps (roadmap)
+## Closed in v0.3 (full-SDLC pass)
+- **CI enforcement** — `.github/workflows/sdlc-gate.yml` runs `sdlc ci` (verify +
+  metrics) and `deps` on every PR, so the spec gate blocks merges, not just locally.
+- **Maintain phase** — a 7th phase with `07-incident.md`; incidents become spec
+  changes + tests (change control) so they can't recur; lessons go to `lessons.md`.
+- **Supply-chain security** — `sdlc deps` runs npm-audit / pip-audit / govulncheck /
+  cargo-audit; wired into the review phase.
+- **Upfront threat modeling** — a STRIDE-lite table in the design template.
+- **Definition of Ready** — `sdlc ready` gates entry to design (AC present, no open
+  questions, problem stated).
+- **Parallel features** — `list` / `switch` and per-feature phase state.
+- **Learning loop** — `lessons.md` + promotion path to `patterns.md` / CLAUDE.md.
+- **Deeper trace** — `verify --deep` greps the repo to confirm each referenced test exists.
+
+## Honest gaps that remain (roadmap)
 1. **Not yet spec-as-source.** The kit verifies code against the spec but does not
-   *generate* code from a formal spec. Full spec-as-source would need a formal,
-   executable spec format — a larger step than the current markdown + `trace.json`.
-2. **No CI eval harness.** The AI-native playbook recommends running 20–50 real
-   tasks as an eval suite on changes to the agent config. The kit tests its own
-   tooling (`npm test`) but ships no feature-level eval runner.
-3. **No team-level metrics.** Per-feature governance exists; cross-feature/DORA-style
+   *generate* code from a formal, executable spec — the top rung of the rigor ladder.
+2. **No feature-level eval harness.** CI now enforces the spec gate, but there is no
+   suite of 20–50 real behavioral tasks run on changes to the agent config (the
+   playbook's recommendation). `npm test` covers the kit's *own* tooling, not features.
+3. **No team-level metrics.** Per-feature governance exists; cross-feature / DORA-style
    trends (first-pass merge rate, review time, change-failure rate) are not collected.
-4. **Benchmarks are relative.** There is still no shared, external benchmark for
-   requirements-satisfaction (the survey's point); the kit's metrics are internally
-   consistent but not validated against one.
+4. **Trace is deeper but not semantic.** `verify --deep` confirms a test *exists*; it
+   still can't confirm the test genuinely *asserts* the criterion (that needs an
+   LLM-judge or assertion parsing).
+5. **Benchmarks are relative.** No shared external benchmark for requirements
+   satisfaction yet; the metrics are internally consistent, not externally validated.
 
 ## Summary
 On the capability the requirements-engineering survey calls out as missing —

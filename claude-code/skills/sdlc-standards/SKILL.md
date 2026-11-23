@@ -53,6 +53,12 @@ user-invocable: false
 | test         | Test matrix covered, report says PASS, no open Critical/High bugs          |
 | review       | No open Critical/High findings in code or security review                 |
 | release      | CHANGELOG updated, release notes + PR description + rollback plan written |
+| maintain     | Incident recorded (07-incident.md), fix traced to a spec change + test, lesson logged |
+
+## Definition of Ready (before entering design)
+A spec is ready for design when it has at least one acceptance criterion (`AC-*`),
+no unresolved open questions, and a stated problem/goal. Check with
+`bash sdlc/scripts/sdlc.sh ready <slug>`.
 
 ## Commit message format (Conventional Commits)
 `feat(scope): summary`, `fix(scope): summary`, `test: ...`, `docs: ...`, `refactor: ...`

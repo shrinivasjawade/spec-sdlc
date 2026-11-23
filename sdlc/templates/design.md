@@ -32,6 +32,12 @@ Tables / collections / fields added or changed, with migrations.
 | Decision | Alternative rejected | Why |
 |----------|----------------------|-----|
 
+## 6b. Threat model (STRIDE-lite — do this before coding, not just at review)
+For each new entry point / trust boundary, note the threat and the mitigation.
+| Asset / entry point | Threat (spoof, tamper, disclose, DoS, escalate) | Mitigation | Covered by |
+|---------------------|--------------------------------------------------|------------|------------|
+| e.g. login endpoint | credential stuffing | rate limit + lockout | AC-2.1 |
+
 ## 7. Task checklist
 Small, ordered tasks. Each task cites the requirement ID(s) it satisfies and the
 test(s) that prove it. The developer ticks each one when done.

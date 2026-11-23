@@ -238,6 +238,10 @@ async function init(flags) {
     ok('.antigravity/rules/spec-sdlc.md written');
   }
 
+  // 3b. CI gate (GitHub Actions) — runs `sdlc ci` (verify + metrics) + dep scan on PRs.
+  writeIfOk(path.join(TARGET, '.github', 'workflows', 'sdlc-gate.yml'), fill(T('ci-github.yml'), stack), force);
+  ok('.github/workflows/sdlc-gate.yml written (CI enforces the spec gate)');
+
   // 4. make shell scripts executable (no-op on Windows).
   try {
     const sh = ['sdlc/scripts/sdlc.sh', 'sdlc/scripts/lib.sh'].map((f) => path.join(TARGET, f));

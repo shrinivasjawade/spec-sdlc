@@ -21,6 +21,7 @@ spec ─► design ─► implement ─► test ─► review ─► release
 | test         | Edge-case tests + report                      | `docs/sdlc/<slug>/03-test-report.md`        |
 | review       | Code review + security review                 | `04-code-review.md`, `05-security-review.md`|
 | release      | Changelog, release notes, PR text, rollback   | `06-release-notes.md`, `CHANGELOG.md`       |
+| maintain      | Handle incidents; turn fixes into spec changes | `07-incident.md`, `sdlc/lessons.md`         |
 
 Templates for each artifact are in `sdlc/templates/`.
 
@@ -69,15 +70,26 @@ The current feature and phase live in `docs/sdlc/current.json`. Change it only t
 the helper script (works from any tool that has a shell):
 
 ```
-bash sdlc/scripts/sdlc.sh start <slug>     # begin a feature
+bash sdlc/scripts/sdlc.sh start <slug>     # begin / resume a feature (parks any active one)
+bash sdlc/scripts/sdlc.sh list             # all features and their phase (active marked *)
+bash sdlc/scripts/sdlc.sh switch <slug>    # make another feature active (parallel work)
 bash sdlc/scripts/sdlc.sh phase <phase>    # advance phase
 bash sdlc/scripts/sdlc.sh status           # where things stand + trace summary
+bash sdlc/scripts/sdlc.sh ready [slug]     # Definition of Ready check before design
 bash sdlc/scripts/sdlc.sh trace            # every spec ID mapped in the Traceability table
-bash sdlc/scripts/sdlc.sh verify           # every ID maps to a task AND a test; emit trace.json
+bash sdlc/scripts/sdlc.sh verify [--deep]  # every ID maps to a task AND a test; --deep greps the repo
 bash sdlc/scripts/sdlc.sh metrics          # governance scorecard + release gate
+bash sdlc/scripts/sdlc.sh deps             # dependency / supply-chain scan (advisory)
+bash sdlc/scripts/sdlc.sh ci [slug]        # CI gate: verify + metrics; non-zero on failure
+bash sdlc/scripts/sdlc.sh dashboard [slug] # (re)build the visual pipeline HTML
 bash sdlc/scripts/sdlc.sh doctor           # check tooling (bash + jq/python3)
 bash sdlc/scripts/sdlc.sh finish           # close the feature
 ```
+
+A **CI workflow** (`.github/workflows/sdlc-gate.yml`) runs `ci` + `deps` on every PR,
+so the spec gate is enforced by the build, not just locally. The **maintain** phase
+turns production incidents (`07-incident.md`) into spec changes + tests so they can't
+recur, and records lessons in `sdlc/lessons.md` (promote recurring ones to `patterns.md`).
 
 ## Change control (re-approval)
 

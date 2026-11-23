@@ -28,6 +28,7 @@ and stop.
 | test         | qa-engineer                          | 03-test-report.md                            |
 | review       | code-reviewer + security-auditor (in parallel) | 04-code-review.md, 05-security-review.md |
 | release      | release-manager                      | 06-release-notes.md, CHANGELOG.md            |
+| maintain     | incident handling (diagnose read-only)         | 07-incident.md, sdlc/lessons.md              |
 
 ## Steps
 1. Validate that the requested phase is one of the six above.

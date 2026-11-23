@@ -1,0 +1,26 @@
+# Spec-driven SDLC gate. Fails the build if any in-progress feature's spec contract
+# (verify) or governance release gate (metrics) does not pass. Add your project's
+# own build/test/lint steps where marked.
+name: SDLC gate
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+
+jobs:
+  sdlc-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Spec gate (traceability contract + governance release gate)
+        run: bash sdlc/scripts/sdlc.sh ci
+
+      - name: Dependency / supply-chain scan (advisory)
+        run: bash sdlc/scripts/sdlc.sh deps || true
+
+      # --- your project's own checks (uncomment / edit) ---
+      # - name: Tests
+      #   run: {{TEST_CMD}}
+      # - name: Lint
+      #   run: {{LINT_CMD}}

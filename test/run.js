@@ -54,6 +54,7 @@ section('installer: codex-only skips .claude/ (AC-001.1), installs core + adapte
   ok(exists(path.join(d, 'AGENTS.md')), 'AGENTS.md adapter installed');
   ok(exists(path.join(d, 'sdlc', 'PROCESS.md')), 'PROCESS.md installed');
   ok(exists(path.join(d, 'sdlc', 'SKILL.md')), 'neutral SKILL.md installed (SDLC-006)');
+  ok(exists(path.join(d, '.github', 'workflows', 'sdlc-gate.yml')), 'CI gate workflow installed');
 }
 
 section('installer: claude installs .claude/ + core (AC-001.2); multi-tool (AC-001.3)');
@@ -134,6 +135,29 @@ section('dashboard: auto-generated on state change + live snapshot injected');
   const html = fs.readFileSync(dash, 'utf8');
   ok(/window\.SDLC_STATE = \{/.test(html), 'dashboard carries an injected live snapshot');
   ok(html.includes('"gate":"PASS"'), 'dashboard snapshot reflects the passing release gate');
+}
+
+// ---------------------------------------------------------------- v0.3 gaps
+section('v0.3: Definition of Ready, parallel features, CI gate, verify --deep, maintain');
+{
+  const d = tmp(); write(path.join(d, 'package.json'), '{"name":"x"}');
+  cli(['init', '--tools=codex', '--yes'], d);
+  sh(['start', 'feat'], d);
+  const fd = path.join(d, 'docs', 'sdlc', 'feat');
+  write(path.join(fd, '01-requirements.md'), '# Spec\n## 1. Problem and goal\nx\n- **AC-1.1** WHEN x the system SHALL y.\n## Open questions\n1. which db?\n');
+  ok(sh(['ready', 'feat'], d).code !== 0, 'ready FAILS with an unresolved open question');
+  write(path.join(fd, '01-requirements.md'), '# Spec\n## 1. Problem and goal\nx\n- **AC-1.1** WHEN x the system SHALL y.\n## Open questions\n_None._\n');
+  ok(sh(['ready', 'feat'], d).code === 0, 'ready PASSES when the spec is complete');
+
+  sh(['start', 'other'], d);               // parallel feature
+  const list = sh(['list'], d).out;
+  ok(/feat/.test(list) && /other/.test(list), 'list shows both parallel features');
+  ok(sh(['switch', 'feat'], d).code === 0, 'switch to another feature works');
+
+  write(path.join(fd, '02-design.md'), '## 8. Traceability\n| Req | Task | Test |\n|--|--|--|\n| AC-1.1 | T1 | `feat.test.js` |\n');
+  ok(sh(['ci', 'feat'], d).code === 0, 'ci gate PASSES for a complete feature');
+  ok(sh(['verify', 'feat', '--deep'], d).code === 0, 'verify --deep runs on a valid contract');
+  ok(sh(['phase', 'maintain'], d).code === 0, 'maintain is a valid phase');
 }
 
 // ---------------------------------------------------------------- summary

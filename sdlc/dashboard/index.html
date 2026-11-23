@@ -233,7 +233,11 @@ const PHASES = [
   { key:"release", name:"Release", artifact:"06-release-notes.md", owner:"Release manager",
     what:"Write the notes, changelog and PR text. A human ships — never the agent.",
     detail:"The release gate requires Spec Fidelity 100% and no open questions. The kit prepares everything; a person runs the push/deploy.",
-    cmd:"sdlc/scripts/sdlc.sh metrics <slug>", gateBefore:"3" }
+    cmd:"sdlc/scripts/sdlc.sh metrics <slug>", gateBefore:"3" },
+  { key:"maintain", name:"Maintain", artifact:"07-incident.md", owner:"On-call",
+    what:"Watch production; turn incidents into spec changes + tests so they can't recur.",
+    detail:"Diagnose read-only, record an incident, and feed the fix back as a new acceptance criterion and test (change control re-enters the pipeline). A human ships the fix.",
+    cmd:"sdlc/scripts/sdlc.sh phase maintain", gateAfter:null }
 ];
 
 const GLYPHS = {
@@ -242,7 +246,8 @@ const GLYPHS = {
   implement:'<path d="M8 8l-4 4 4 4M16 8l4 4-4 4M13 6l-2 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>',
   test:'<path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>',
   review:'<circle cx="11" cy="11" r="6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M16 16l4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
-  release:'<path d="M12 3c3 2 5 5 5 9l-5 3-5-3c0-4 2-7 5-9z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M7 16l-2 5 5-2M17 16l2 5-5-2" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" fill="none"/>'
+  release:'<path d="M12 3c3 2 5 5 5 9l-5 3-5-3c0-4 2-7 5-9z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M7 16l-2 5 5-2M17 16l2 5-5-2" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" fill="none"/>',
+  maintain:'<path d="M14.5 5.5a3.5 3.5 0 0 1-4.6 4.6L5 15l-1.5 3.5L5 20l3.5-1.5 4.9-4.9a3.5 3.5 0 0 1 4.6-4.6l-2.5 2.5-2-2z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>'
 };
 
 const st = window.SDLC_STATE;
