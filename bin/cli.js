@@ -199,7 +199,9 @@ async function init(flags) {
 
   // 2. Claude Code adapter — ONLY when selected (SDLC-001).
   if (hasClaude) {
-    const srcClaude = path.join(PKG_ROOT, '.claude');
+    // Source folder is 'claude-code/' in the repo; it deploys as '.claude/' in the
+    // target so Claude Code still auto-loads it (required folder name, like .git).
+    const srcClaude = path.join(PKG_ROOT, 'claude-code');
     const dstClaude = path.join(TARGET, '.claude');
     const settingsPath = path.join(dstClaude, 'settings.json');
     const hadSettings = exists(settingsPath);

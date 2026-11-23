@@ -93,6 +93,7 @@ Current state:
 
 ## Final report to the user
 - What was built (3 to 5 bullets)
-- Links to the artifacts in `docs/sdlc/<slug>/`
+- Links to the artifacts in `docs/sdlc/<slug>/`, including the visual
+  `dashboard.html` (auto-refreshed each phase; open it in a browser)
 - Open Medium / Low findings, if any
 - The exact commands for the human to push and open the pull request

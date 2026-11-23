@@ -13,7 +13,7 @@
     "bin/",
     "sdlc/",
     "templates/",
-    ".claude/",
+    "claude-code/",
     "README.md",
     "LICENSE"
   ],

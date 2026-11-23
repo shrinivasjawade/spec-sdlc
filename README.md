@@ -50,7 +50,9 @@ Re-running `init` is safe; it won't overwrite your files unless you pass `--forc
 | Layer | File(s) | What it does |
 |-------|---------|--------------|
 | Neutral core (always) | `sdlc/` — `PROCESS.md`, `SKILL.md`, `patterns.md`, `scripts/`, `templates/` | The canonical process, governance scripts, and artifact templates every tool reads. |
-| Claude Code (if selected) | `.claude/` | Subagents per phase **and hooks that enforce** the gates. Thin shims point back at the neutral core (one source of truth). |
+| Claude Code (if selected) | `claude-code/` in this repo → installs as `.claude/` | Subagents per phase **and hooks that enforce** the gates. Thin shims point back at the neutral core (one source of truth). |
+
+> Note: the Claude Code adapter is stored as `claude-code/` in this repository (a plain, visible folder), and the installer deploys it as `.claude/` in your project — the name Claude Code requires to auto-load it, like `.git`.
 
 ### Per-tool adapters
 
@@ -110,6 +112,25 @@ Quality is measured, not asserted:
   Gate 2. **Patterns:** `sdlc/patterns.md` is checked for adherence in review.
 
 Run the kit's own test suite with `npm test`.
+
+## Visualize (anyone can read it)
+
+`sdlc/dashboard/index.html` is a dependency-free, **n8n-style pipeline map** — six
+steps, three human gates, fix loops, and a live governance scorecard — that opens in
+any browser (double-click, no build). It's written for non-coders: plain language,
+colour-coded status, click a step for details.
+
+Every time the pipeline advances, the kit regenerates a live view for the current
+feature at `docs/sdlc/<slug>/dashboard.html` with that feature's real status and
+metrics baked in. Rebuild it anytime with:
+
+```bash
+bash sdlc/scripts/sdlc.sh dashboard <slug>
+```
+
+Edit `sdlc/dashboard/index.html` to change the look — it ships with the kit. See
+[QUALITY.md](QUALITY.md) for how the kit measures up against the 2026 spec-driven
+SDLC research.
 
 ## What's inside the kit
 

@@ -119,6 +119,23 @@ section('state helper: invalid phase + trace/verify/metrics gates (AC-002.4)');
   ok(sh(['metrics', 'demo'], d).code === 0, 'metrics gate PASSes when complete');
 }
 
+// ---------------------------------------------------------------- dashboard
+section('dashboard: auto-generated on state change + live snapshot injected');
+{
+  const d = tmp(); write(path.join(d, 'package.json'), '{"name":"x"}');
+  cli(['init', '--tools=codex', '--yes'], d);
+  sh(['start', 'viz'], d);
+  const dash = path.join(d, 'docs', 'sdlc', 'viz', 'dashboard.html');
+  ok(exists(dash), 'dashboard.html auto-generated on start (skill use -> HTML)');
+  const fd = path.join(d, 'docs', 'sdlc', 'viz');
+  write(path.join(fd, '01-requirements.md'), '# Spec\n- **AC-1.1** WHEN x the system SHALL y.\n## Open questions\n_None._\n');
+  write(path.join(fd, '02-design.md'), '## 8. Traceability\n| Req | Task | Test |\n|--|--|--|\n| AC-1.1 | T1 | `a.test` |\n');
+  sh(['dashboard', 'viz'], d);
+  const html = fs.readFileSync(dash, 'utf8');
+  ok(/window\.SDLC_STATE = \{/.test(html), 'dashboard carries an injected live snapshot');
+  ok(html.includes('"gate":"PASS"'), 'dashboard snapshot reflects the passing release gate');
+}
+
 // ---------------------------------------------------------------- summary
 console.log(`\n${'='.repeat(50)}`);
 console.log(`${pass} passed, ${fail} failed`);

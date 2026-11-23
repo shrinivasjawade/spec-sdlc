@@ -7,6 +7,7 @@
 #   bash sdlc/scripts/sdlc.sh trace [slug]           every spec ID must be mapped in the design's Traceability table
 #   bash sdlc/scripts/sdlc.sh verify [slug]          validate the traceability contract; emit trace.json
 #   bash sdlc/scripts/sdlc.sh metrics [slug]         governance scorecard + release gate
+#   bash sdlc/scripts/sdlc.sh dashboard [slug]       (re)build the visual pipeline HTML
 #   bash sdlc/scripts/sdlc.sh doctor                 check required tooling is present
 #   bash sdlc/scripts/sdlc.sh finish                 close the current feature
 #
@@ -22,6 +23,8 @@ write_state() {  # write_state <feature> <phase>
     "$1" "$2" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$SDLC_STATE"
   printf '%s  phase=%-12s (state change)\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$2" \
     >> "$SDLC_DIR/$1/activity.log"
+  # Whenever the pipeline advances, refresh the visual dashboard for this feature.
+  gen_dashboard "$1" || true
 }
 
 require_feature() {
@@ -29,26 +32,6 @@ require_feature() {
     echo "No feature in progress. Start one: bash sdlc/scripts/sdlc.sh start <slug>" >&2
     exit 1
   fi
-}
-
-# coverage <spec> <design>  ->  echoes "covered total missing..." using the
-# Traceability table only. Returns 0 always; caller inspects the numbers.
-coverage() {
-  local spec="$1" design="$2" section ids id covered=0 total=0 missing=""
-  ids="$(sdlc_spec_ids "$spec")"
-  section="$(sdlc_trace_section "$design")"
-  while IFS= read -r id; do
-    [ -z "$id" ] && continue
-    total=$((total + 1))
-    if printf '%s' "$section" | grep -q -- "$id"; then
-      covered=$((covered + 1))
-    else
-      missing="$missing $id"
-    fi
-  done <<EOF
-$ids
-EOF
-  echo "$covered $total$missing"
 }
 
 cmd="${1:-status}"
@@ -177,69 +160,35 @@ EOF
     ;;
 
   metrics)
-    # Governance scorecard (SDAD-style) + release gate.
+    # Governance scorecard (SDAD-style) + release gate. Math lives in sdlc_scorecard.
     slug="${2:-$(sdlc_get feature)}"
     [ -z "$slug" ] && { echo "No feature in progress and no slug given." >&2; exit 1; }
     dir="$SDLC_DIR/$slug"
     spec="$dir/01-requirements.md"; design="$dir/02-design.md"; log="$dir/activity.log"
     [ -f "$spec" ] || { echo "No spec for '$slug'." >&2; exit 1; }
     phase="$(sdlc_get phase 2>/dev/null || echo '?')"
-
-    # Spec Fidelity: AC/NFR mapped in traceability / total.
-    fidelity_c=0; fidelity_t=0
-    if [ -f "$design" ]; then
-      read -r fidelity_c fidelity_t _ <<<"$(coverage "$spec" "$design")"
-    fi
-    pct() { [ "${2:-0}" -gt 0 ] && echo $(( $1 * 100 / $2 )) || echo 0; }
-    fidelity_pct="$(pct "$fidelity_c" "$fidelity_t")"
-
-    # AC test coverage: AC rows in the table whose test cell is filled / total AC.
-    ac_total="$(printf '%s\n' "$(sdlc_spec_ids "$spec")" | grep -c '^AC-' || true)"
-    ac_tested=0
-    if [ -f "$design" ]; then
-      section="$(sdlc_trace_section "$design")"
-      while IFS= read -r id; do
-        case "$id" in AC-*) ;; *) continue ;; esac
-        row="$(printf '%s\n' "$section" | grep -E "^\|[[:space:]]*$id[[:space:]]*\|" | head -n1 || true)"
-        tcell="$(printf '%s' "$row" | awk -F'|' '{gsub(/^ +| +$/,"",$4); print $4}')"
-        case "$tcell" in ""|"-"|"TBD"|"...") ;; *) ac_tested=$((ac_tested + 1)) ;; esac
-      done <<EOF
-$(sdlc_spec_ids "$spec")
-EOF
-    fi
-    ac_pct="$(pct "$ac_tested" "$ac_total")"
-
-    # Ambiguity Tax: unanswered open questions + vague terms lacking numbers.
-    open_q="$(awk '/^#+[[:space:]].*[Oo]pen questions/{p=1;next} /^#+[[:space:]]/{p=0} p && /^[0-9]+\./ && !/Answer:/{n++} END{print n+0}' "$spec")"
-    vague="$( { grep -oiE '\b(fast|quick|easy|robust|scalable|secure|user-friendly|efficient|appropriate|as needed|etc\.|TBD|\?\?\?)\b' "$spec" || true; } | wc -l | tr -d ' ')"
-    ambiguity=$((open_q + vague))
-
-    # Task Completion Index + repair multiplier phi (implement re-entries).
-    tdone=0; topen=0
-    if [ -f "$design" ]; then
-      tdone="$(grep -c -- '- \[x\]' "$design" || true)"
-      topen="$(grep -c -- '- \[ \]' "$design" || true)"
-    fi
-    ttot=$((tdone + topen)); tci_pct="$(pct "$tdone" "$ttot")"
-    impl_entries=0
-    [ -f "$log" ] && impl_entries="$(grep -c 'phase=implement' "$log" || true)"
-    loops=$((impl_entries > 0 ? impl_entries - 1 : 0))
-    phi="1.$(( loops * 5 ))"; [ "$loops" -eq 0 ] && phi="1.0"
-
-    verdict() { [ "$1" = "1" ] && echo "PASS" || echo "WARN"; }
-    gate="PASS"
-    [ "$fidelity_pct" -eq 100 ] && [ "$fidelity_t" -gt 0 ] || gate="FAIL"
-    [ "$open_q" -eq 0 ] || gate="FAIL"
-
+    read -r fc ft ac_c ac_t oq vg td to loops gate <<<"$(sdlc_scorecard "$spec" "$design" "$log")"
+    fpct="$(pct "$fc" "$ft")"; apct="$(pct "$ac_c" "$ac_t")"; tpct="$(pct "$td" $((td + to)))"
+    amb=$((oq + vg)); phi="1.$(( loops * 5 ))"; [ "$loops" -eq 0 ] && phi="1.0"
     echo "Governance scorecard — '$slug'  (phase: $phase)"
-    echo "  Spec Fidelity        : $fidelity_c/$fidelity_t mapped in traceability   (${fidelity_pct}%)  [$( [ "$fidelity_pct" -eq 100 ] && [ "$fidelity_t" -gt 0 ] && echo PASS || echo WARN)]"
-    echo "  AC Test Coverage     : $ac_tested/$ac_total criteria have a test        (${ac_pct}%)  [$( [ "$ac_pct" -eq 100 ] && [ "$ac_total" -gt 0 ] && echo PASS || echo WARN)]"
-    echo "  Ambiguity Tax        : $open_q open question(s) + $vague vague term(s) = $ambiguity  [$( [ "$ambiguity" -eq 0 ] && echo PASS || echo WARN)]"
-    echo "  Task Completion (TCI): $tdone/$ttot tasks done                           (${tci_pct}%)"
+    echo "  Spec Fidelity        : $fc/$ft mapped in traceability   (${fpct}%)  [$( [ "$fpct" -eq 100 ] && [ "$ft" -gt 0 ] && echo PASS || echo WARN)]"
+    echo "  AC Test Coverage     : $ac_c/$ac_t criteria have a test        (${apct}%)  [$( [ "$apct" -eq 100 ] && [ "$ac_t" -gt 0 ] && echo PASS || echo WARN)]"
+    echo "  Ambiguity Tax        : $oq open question(s) + $vg vague term(s) = $amb  [$( [ "$amb" -eq 0 ] && echo PASS || echo WARN)]"
+    echo "  Task Completion (TCI): $td/$((td + to)) tasks done                           (${tpct}%)"
     echo "  Repair multiplier φ  : implement re-entries=$loops  (φ=$phi)"
     echo "  ------------------------------------------------------------"
     echo "  RELEASE GATE         : $gate   (requires Spec Fidelity 100% and 0 open questions)"
     [ "$gate" = "PASS" ] || exit 1
+    ;;
+
+  dashboard)
+    # (Re)build the visual pipeline HTML for a feature from sdlc/dashboard/index.html.
+    slug="${2:-$(sdlc_get feature)}"
+    [ -z "$slug" ] && { echo "No feature in progress and no slug given." >&2; exit 1; }
+    [ -f "$ROOT/sdlc/dashboard/index.html" ] || { echo "No dashboard template at sdlc/dashboard/index.html" >&2; exit 1; }
+    [ -d "$SDLC_DIR/$slug" ] || { echo "Unknown feature '$slug'." >&2; exit 1; }
+    gen_dashboard "$slug"
+    echo "Dashboard written: $(rel_path "$SDLC_DIR/$slug/dashboard.html")  — open it in a browser."
     ;;
 
   doctor)

@@ -78,3 +78,70 @@ sdlc_trace_section() {
 sdlc_spec_ids() {
   grep -oE '(AC-[0-9]+\.[0-9]+|NFR-[0-9]+)' "$1" 2>/dev/null | sort -u || true
 }
+
+# pct <n> <d>  ->  integer percentage (0 when d==0).
+pct() { if [ "${2:-0}" -gt 0 ]; then echo $(( $1 * 100 / $2 )); else echo 0; fi; }
+
+# coverage <spec> <design>  ->  "covered total missing..." using the Traceability table.
+coverage() {
+  local spec="$1" design="$2" section ids id covered=0 total=0 missing=""
+  ids="$(sdlc_spec_ids "$spec")"
+  section="$(sdlc_trace_section "$design")"
+  while IFS= read -r id; do
+    [ -z "$id" ] && continue
+    total=$((total + 1))
+    if printf '%s' "$section" | grep -q -- "$id"; then covered=$((covered + 1)); else missing="$missing $id"; fi
+  done <<EOF
+$ids
+EOF
+  echo "$covered $total$missing"
+}
+
+# sdlc_scorecard <spec> <design> <log>  ->  one line of raw numbers:
+#   fidelity_covered fidelity_total ac_tested ac_total open_q vague tasks_done tasks_open loops gate
+sdlc_scorecard() {
+  local spec="$1" design="$2" log="$3"
+  local fc=0 ft=0 ac_t=0 ac_c=0 oq=0 vg=0 td=0 to=0 loops=0 gate=FAIL section ids id row tcell impl=0
+  [ -f "$spec" ] || { echo "0 0 0 0 0 0 0 0 0 FAIL"; return 0; }
+  if [ -f "$design" ]; then read -r fc ft _ <<<"$(coverage "$spec" "$design")"; fi
+  ids="$(sdlc_spec_ids "$spec")"
+  ac_t="$(printf '%s\n' "$ids" | grep -c '^AC-' || true)"
+  section="$(sdlc_trace_section "$design")"
+  while IFS= read -r id; do
+    case "$id" in AC-*) ;; *) continue ;; esac
+    row="$(printf '%s\n' "$section" | grep -E "^\|[[:space:]]*$id[[:space:]]*\|" | head -n1 || true)"
+    tcell="$(printf '%s' "$row" | awk -F'|' '{gsub(/^ +| +$/,"",$4); print $4}')"
+    case "$tcell" in ""|"-"|"TBD"|"...") ;; *) ac_c=$((ac_c + 1)) ;; esac
+  done <<EOF
+$ids
+EOF
+  oq="$(awk '/^#+[[:space:]].*[Oo]pen questions/{p=1;next} /^#+[[:space:]]/{p=0} p && /^[0-9]+\./ && !/Answer:/{n++} END{print n+0}' "$spec" 2>/dev/null || echo 0)"
+  vg="$( { grep -oiE '\b(fast|quick|easy|robust|scalable|secure|user-friendly|efficient|appropriate|as needed|etc\.|TBD|\?\?\?)\b' "$spec" 2>/dev/null || true; } | wc -l | tr -d ' ')"
+  if [ -f "$design" ]; then td="$(grep -c -- '- \[x\]' "$design" || true)"; to="$(grep -c -- '- \[ \]' "$design" || true)"; fi
+  [ -f "$log" ] && impl="$(grep -c 'phase=implement' "$log" || true)"
+  loops=$(( impl > 0 ? impl - 1 : 0 ))
+  if [ "$ft" -gt 0 ] && [ "$fc" -eq "$ft" ] && [ "$oq" -eq 0 ]; then gate=PASS; fi
+  echo "$fc $ft $ac_c $ac_t $oq $vg $td $to $loops $gate"
+}
+
+# gen_dashboard <feature>  ->  writes docs/sdlc/<feature>/dashboard.html from the
+# template with the live snapshot injected. Best-effort; no-op without the template.
+gen_dashboard() {
+  local feature="$1"
+  local tpl="$ROOT/sdlc/dashboard/index.html"
+  local dir="$SDLC_DIR/$feature"
+  [ -f "$tpl" ] || return 0
+  local spec="$dir/01-requirements.md" design="$dir/02-design.md" log="$dir/activity.log"
+  local phase; phase="$(sdlc_get phase 2>/dev/null)"; [ -z "$phase" ] && phase="requirements"
+  local fc ft ac_c ac_t oq vg td to loops gate
+  read -r fc ft ac_c ac_t oq vg td to loops gate <<<"$(sdlc_scorecard "$spec" "$design" "$log")"
+  local fpct apct tpct ts json
+  fpct="$(pct "$fc" "$ft")"; apct="$(pct "$ac_c" "$ac_t")"; tpct="$(pct "$td" $((td + to)))"
+  ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  json="$(printf '{"feature":"%s","phase":"%s","generated":"%s","blocked":false,"tasks":{"done":%s,"open":%s},"trace":{"covered":%s,"total":%s},"metrics":{"fidelity_pct":%s,"ac_pct":%s,"tci_pct":%s,"ambiguity":%s,"gate":"%s"}}' \
+    "$feature" "$phase" "$ts" "$td" "$to" "$fc" "$ft" "$fpct" "$apct" "$tpct" "$((oq + vg))" "$gate")"
+  mkdir -p "$dir"
+  awk -v j="window.SDLC_STATE = $json;" '
+    /\/\*__SDLC_STATE__\*\// { print j " /*__SDLC_STATE__*/"; next } { print }' \
+    "$tpl" > "$dir/dashboard.html" 2>/dev/null || true
+}

@@ -40,6 +40,21 @@ Templates for each artifact are in `sdlc/templates/`.
   named so their `AC-*` is identifiable.
 - To change behaviour: change the spec first, then the design, then the code.
 
+## How much rigor, and when
+
+Spec-driven work has three rigor levels (after the SDD practitioner guide):
+
+- **spec-first** — write the spec, then build freely from it.
+- **spec-anchored** — the spec stays the source of truth; code and tests trace back
+  to it and are verified against it. **This kit operates here.**
+- **spec-as-source** — code is generated from a formal, executable spec.
+
+Use the full pipeline when the change is non-trivial, user-facing, risky, touches
+data or security, or will be maintained by others. For a tiny, reversible fix, work
+normally — the guard rails stay on, but the phase gates add overhead you don't need.
+When in doubt, write the spec: a few testable rules cost little and catch ambiguity
+early (that is the Ambiguity Tax the scorecard measures).
+
 ## The three human gates — never skip
 
 1. **Gate 1 (after spec):** the human approves the requirements before any design.
