@@ -1,0 +1,14 @@
+# Node
+node_modules/
+npm-debug.log*
+yarn-error.log*
+*.tgz
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+
+# SDLC state is per-project and generated at runtime; don't ship it in the kit repo.
+# (Installed projects DO commit their own docs/sdlc/ — this ignore applies to the kit itself.)
+/docs/sdlc/current.json

@@ -44,7 +44,7 @@ Templates for each artifact are in `sdlc/templates/`.
 
 1. **Gate 1 (after spec):** the human approves the requirements before any design.
 2. **Gate 2 (after design):** the human approves the design + task list. Every
-   `AC-*`/`NFR-*` must be covered in traceability (`bash .claude/scripts/sdlc.sh trace`).
+   `AC-*`/`NFR-*` must be covered in traceability (`bash sdlc/scripts/sdlc.sh trace`).
 3. **Gate 3 (before release):** the human approves, then release artifacts are
    prepared. **The agent never pushes, deploys or publishes** — a human does.
 
@@ -54,13 +54,38 @@ The current feature and phase live in `docs/sdlc/current.json`. Change it only t
 the helper script (works from any tool that has a shell):
 
 ```
-bash .claude/scripts/sdlc.sh start <slug>     # begin a feature
-bash .claude/scripts/sdlc.sh phase <phase>    # advance phase
-bash .claude/scripts/sdlc.sh status           # where things stand + trace summary
-bash .claude/scripts/sdlc.sh trace            # verify every spec ID is covered
-bash .claude/scripts/sdlc.sh doctor           # check tooling (bash + jq/python3)
-bash .claude/scripts/sdlc.sh finish           # close the feature
+bash sdlc/scripts/sdlc.sh start <slug>     # begin a feature
+bash sdlc/scripts/sdlc.sh phase <phase>    # advance phase
+bash sdlc/scripts/sdlc.sh status           # where things stand + trace summary
+bash sdlc/scripts/sdlc.sh trace            # every spec ID mapped in the Traceability table
+bash sdlc/scripts/sdlc.sh verify           # every ID maps to a task AND a test; emit trace.json
+bash sdlc/scripts/sdlc.sh metrics          # governance scorecard + release gate
+bash sdlc/scripts/sdlc.sh doctor           # check tooling (bash + jq/python3)
+bash sdlc/scripts/sdlc.sh finish           # close the feature
 ```
+
+## Change control (re-approval)
+
+The spec and design are approved artifacts, not drafts. After approval:
+
+- A **material change to the spec** (new/changed `AC-*`/`NFR-*`, scope change)
+  returns the work to **Gate 1** before implementation continues, and the change is
+  recorded in the spec.
+- A **change to the design** after Gate 2 returns it to **Gate 2**.
+- Re-run `verify` and `trace` after any spec or design edit; mark affected design
+  tasks and tests for review. Behaviour never changes ahead of the spec.
+
+## Governance and provenance
+
+- Metrics make quality measurable: **Spec Fidelity** (AC/NFR mapped), **AC Test
+  Coverage**, **Ambiguity Tax** (open questions + vague terms), **Task Completion
+  Index** with a repair multiplier **φ**. The **release gate** blocks release until
+  Spec Fidelity is 100% and open questions are resolved.
+- **Independent verification:** a verifier with fresh context (not the author) checks
+  the implementation against the spec during review.
+- **Provenance:** every agent run is appended to `docs/sdlc/<slug>/provenance.jsonl`
+  (agent, phase, session, spec version); the structured contract is `trace.json`.
+- **Patterns:** `sdlc/patterns.md` lists required patterns; review flags deviations.
 
 ## What enforcement you get per tool
 

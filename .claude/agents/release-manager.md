@@ -26,7 +26,7 @@ hand the final push or deploy to a human.
 4. Propose a semantic version bump (major / minor / patch) with a one-line reason.
    Do not change the version number yourself unless asked.
 5. Write `docs/sdlc/<slug>/06-release-notes.md` using
-   `.claude/skills/sdlc/templates/release-notes.md`, including a ready-to-paste
+   `sdlc/templates/release-notes.md`, including a ready-to-paste
    pull request title and description and a rollback plan.
 
 ## Rules

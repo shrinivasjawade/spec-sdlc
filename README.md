@@ -34,8 +34,10 @@ npx spec-sdlc-kit detect      # print the detected stack/test/lint
 ```
 
 `init` will:
-- install the **Claude Code layer** (`.claude/` — agents, skills, enforcing hooks),
-- install the **tool-neutral core** (`sdlc/PROCESS.md` + `sdlc/templates/`),
+- always install the **tool-neutral core** (`sdlc/` — scripts, templates, `PROCESS.md`,
+  a vendor-neutral `SKILL.md`, and `patterns.md`),
+- install the **Claude Code layer** (`.claude/` — agents, skills, enforcing hooks)
+  **only if you select Claude** (so a Codex-only repo stays free of `.claude/`),
 - generate an **adapter per tool** you selected (see table below),
 - **auto-detect** your stack and fill the test/lint commands into
   `.claude/CLAUDE.md` and each adapter,
@@ -47,8 +49,8 @@ Re-running `init` is safe; it won't overwrite your files unless you pass `--forc
 
 | Layer | File(s) | What it does |
 |-------|---------|--------------|
-| Neutral core | `sdlc/PROCESS.md`, `sdlc/templates/` | The full process + artifact templates every tool reads. |
-| Claude Code | `.claude/` | Subagents per phase **and hooks that enforce** the gates. |
+| Neutral core (always) | `sdlc/` — `PROCESS.md`, `SKILL.md`, `patterns.md`, `scripts/`, `templates/` | The canonical process, governance scripts, and artifact templates every tool reads. |
+| Claude Code (if selected) | `.claude/` | Subagents per phase **and hooks that enforce** the gates. Thin shims point back at the neutral core (one source of truth). |
 
 ### Per-tool adapters
 
@@ -80,13 +82,34 @@ reads its adapter, which tells it to write the spec first, get your approval, th
 design → implement → test → review. Drive phases/state yourself with the script:
 
 ```bash
-bash .claude/scripts/sdlc.sh start <slug>    # begin a feature (phase=requirements)
-bash .claude/scripts/sdlc.sh phase design    # advance
-bash .claude/scripts/sdlc.sh status          # feature, phase, tasks, trace summary
-bash .claude/scripts/sdlc.sh trace           # verify every spec ID is covered in the design
-bash .claude/scripts/sdlc.sh doctor          # check tooling
-bash .claude/scripts/sdlc.sh finish          # close the feature
+bash sdlc/scripts/sdlc.sh start <slug>    # begin a feature (phase=requirements)
+bash sdlc/scripts/sdlc.sh phase design    # advance
+bash sdlc/scripts/sdlc.sh status          # feature, phase, tasks, trace summary
+bash sdlc/scripts/sdlc.sh trace           # every spec ID mapped in the Traceability table
+bash sdlc/scripts/sdlc.sh verify          # every ID maps to a task AND a test; emits trace.json
+bash sdlc/scripts/sdlc.sh metrics         # governance scorecard + release gate
+bash sdlc/scripts/sdlc.sh doctor          # check tooling
+bash sdlc/scripts/sdlc.sh finish          # close the feature
 ```
+
+## Governance (AI-native)
+
+Quality is measured, not asserted:
+
+- **`verify`** turns the design's traceability table into a machine-readable
+  contract (`trace.json`): every `AC-*`/`NFR-*` must map to a task **and** a test.
+- **`metrics`** prints a scorecard — **Spec Fidelity**, **AC Test Coverage**,
+  **Ambiguity Tax** (open questions + vague terms), **Task Completion Index** with a
+  **repair multiplier φ** — and a **release gate** that blocks release until Spec
+  Fidelity is 100% and open questions are resolved.
+- **Independent verification:** a fresh-context `verifier` agent checks the
+  implementation against the spec during review (it didn't write the code).
+- **Provenance:** every subagent run is appended to `docs/sdlc/<slug>/provenance.jsonl`
+  (agent, phase, session, spec version) — an audit trail beside the git history.
+- **Change control:** a material spec change re-opens Gate 1; a design change re-opens
+  Gate 2. **Patterns:** `sdlc/patterns.md` is checked for adherence in review.
+
+Run the kit's own test suite with `npm test`.
 
 ## What's inside the kit
 
@@ -111,7 +134,7 @@ templates/                    adapter + PROCESS sources used by the installer
 |-----------------------------|------|
 | Change the process/gates    | `templates/PROCESS.md` (+ `.claude/skills/sdlc/SKILL.md`) |
 | Change coding rules / DoD   | `.claude/skills/sdlc-standards/SKILL.md` |
-| Change artifact formats     | `.claude/skills/sdlc/templates/*.md` |
+| Change artifact formats     | `sdlc/templates/*.md` (canonical, tool-neutral) |
 | Set test/lint command       | `.claude/settings.json` → `env.SDLC_TEST_CMD` / `SDLC_LINT_CMD` |
 | Add/adjust a tool adapter   | `templates/*.md`, `templates/cursor.mdc` |
 | Block more commands         | `.claude/hooks/guard-bash.sh` |

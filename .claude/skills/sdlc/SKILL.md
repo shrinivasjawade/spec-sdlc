@@ -27,6 +27,9 @@ Current state:
   with AskUserQuestion (options: Approve / Request changes / Stop).
 - Keep this main conversation lean. Ask subagents for short final reports;
   the detail lives in `docs/sdlc/<slug>/`.
+- Change control: if an already-approved spec changes materially, return to
+  **Gate 1**; if an already-approved design changes, return to **Gate 2**. Re-run
+  `verify`/`trace` after any spec or design edit so traceability stays honest.
 
 ## Step 0 - Start or resume
 - If a feature is in progress and the request above is empty, resume at its
@@ -69,15 +72,21 @@ Current state:
 
 ## Step 5 - Review  (phase: review)
 1. `bash .claude/scripts/sdlc.sh phase review`
-2. Delegate to **code-reviewer** AND **security-auditor** in parallel (two Agent
-   calls in the same message), each with the slug.
-3. If either reports Critical or High findings: `phase implement`, send those
-   findings to the **developer**, then `phase review` and review again.
-   Maximum 2 loops, then escalate to the user. Medium and Low findings are
-   listed for the user but do not block.
+2. Run `bash .claude/scripts/sdlc.sh verify` (contract check) and
+   `bash .claude/scripts/sdlc.sh metrics` (governance scorecard); fold the results
+   into the gate summary.
+3. Delegate to **code-reviewer**, **security-auditor** AND **verifier** in parallel
+   (three Agent calls in the same message), each with the slug. The verifier runs
+   independently (fresh context) and checks the implementation against the spec.
+4. If any reports Critical or High findings, or the verifier returns FAIL:
+   `phase implement`, send those findings to the **developer**, then `phase review`
+   and review again. Maximum 2 loops, then escalate to the user. Medium and Low
+   findings are listed for the user but do not block.
 
 ## Step 6 - Release  (phase: release)
-1. **GATE 3**: show test and review results and ask "Prepare the release?".
+1. Run `bash .claude/scripts/sdlc.sh metrics`. **GATE 3** requires the release gate
+   to PASS (Spec Fidelity 100%, no open questions). Show the scorecard plus the test
+   and review results, and ask "Prepare the release?".
 2. On approve: `bash .claude/scripts/sdlc.sh phase release`, then delegate to the
    **release-manager** subagent with the slug.
 3. `bash .claude/scripts/sdlc.sh finish`

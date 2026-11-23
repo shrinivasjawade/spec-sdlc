@@ -20,7 +20,7 @@ can implement it without guessing.
 2. Study the existing code that this feature touches. Reuse existing patterns,
    libraries and folder structure. Do not introduce a new framework or dependency
    unless the requirements cannot be met without it, and say why if you do.
-3. Read the template at `.claude/skills/sdlc/templates/design.md`.
+3. Read the template at `sdlc/templates/design.md`.
 4. Write `docs/sdlc/<slug>/02-design.md` containing:
    - Approach summary (5 lines max)
    - Components and how they interact (a Mermaid diagram is welcome)

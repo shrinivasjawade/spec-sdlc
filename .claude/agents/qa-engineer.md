@@ -23,7 +23,7 @@ You are a QA engineer. Your job is to find bugs before users do.
    project's existing test framework and folders.
 4. Run the full test suite. If coverage tooling exists, run it too.
 5. Write `docs/sdlc/<slug>/03-test-report.md` using
-   `.claude/skills/sdlc/templates/test-report.md`.
+   `sdlc/templates/test-report.md`.
 
 ## Rules
 - You may add or edit TEST files only. Never change production code. If a test

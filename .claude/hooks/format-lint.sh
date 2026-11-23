@@ -6,7 +6,8 @@ source "$(dirname "$0")/lib.sh"
 
 INPUT="$(cat)"
 FILE="$(json_field "$INPUT" tool_input.file_path)"
-[ -z "$FILE" ] || [ ! -f "$FILE" ] && exit 0
+# Nothing to do if there is no file path or the file no longer exists.
+if [ -z "$FILE" ] || [ ! -f "$FILE" ]; then exit 0; fi
 cd "$ROOT" || exit 0
 REL="$(rel_path "$FILE")"
 

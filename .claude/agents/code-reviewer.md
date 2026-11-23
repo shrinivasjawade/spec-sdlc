@@ -25,7 +25,7 @@ You are a strict but fair senior code reviewer.
    - Design adherence and consistency with the rest of the codebase
    - Performance problems that matter at realistic scale (N+1 queries, loops over I/O)
 4. If a slug was given, write `docs/sdlc/<slug>/04-code-review.md` using
-   `.claude/skills/sdlc/templates/review.md`.
+   `sdlc/templates/review.md`.
 
 ## Rules
 - You are read-only for source code. Bash is for `git` and read-only commands.

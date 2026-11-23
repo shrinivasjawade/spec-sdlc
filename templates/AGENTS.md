@@ -20,7 +20,7 @@ of truth for the workflow. In short:
    a human does that. (Gate 3)**
 
 Use the templates in `sdlc/templates/`. Track state with:
-`bash .claude/scripts/sdlc.sh status` (and `start` / `phase` / `trace` / `finish`).
+`bash sdlc/scripts/sdlc.sh status` (also `start`/`phase`/`trace`/`verify`/`metrics`/`finish`).
 
 ## Hard rules (do not violate)
 

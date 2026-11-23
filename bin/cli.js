@@ -118,16 +118,17 @@ function mergeSettings(ours, existing) {
     const set = new Set([...(out.permissions[key] || []), ...((ours.permissions || {})[key] || [])]);
     out.permissions[key] = [...set];
   }
+  // Merge hook groups, deduping by exact group signature so re-running init
+  // never appends a group that is already present (idempotent).
   out.hooks = out.hooks || {};
+  const sig = (g) => JSON.stringify(g);
   for (const event of Object.keys(ours.hooks || {})) {
-    const existingCmds = new Set(
-      JSON.stringify(out.hooks[event] || []).match(/sdlc\/hooks\/[a-z-]+\.sh/g) || []
-    );
-    const toAdd = (ours.hooks[event] || []).filter((grp) => {
-      const sig = JSON.stringify(grp).match(/hooks\/[a-z-]+\.sh/g) || [];
-      return !sig.every((x) => existingCmds.has(x.replace(/^hooks/, 'sdlc/hooks')));
-    });
-    out.hooks[event] = [...(out.hooks[event] || []), ...toAdd];
+    const groups = out.hooks[event] || [];
+    const seen = new Set(groups.map(sig));
+    for (const grp of ours.hooks[event] || []) {
+      if (!seen.has(sig(grp))) { groups.push(grp); seen.add(sig(grp)); }
+    }
+    out.hooks[event] = groups;
   }
   return out;
 }
@@ -139,7 +140,7 @@ function expandTools(spec) {
   const map = { claude: 'claude', 'claude-code': 'claude', codex: 'codex', agents: 'codex',
     gemini: 'codex', cursor: 'cursor', windsurf: 'windsurf', codeium: 'windsurf',
     antigravity: 'antigravity' };
-  const picked = new Set(['claude']); // Claude layer + neutral core are always installed
+  const picked = new Set(); // neutral core always installs; .claude only if selected
   for (const t of String(spec).split(',').map((x) => x.trim().toLowerCase())) {
     if (map[t]) picked.add(map[t]);
   }
@@ -157,15 +158,15 @@ async function chooseTools(flags) {
   const fromFlag = expandTools(flags.tools);
   if (fromFlag) return fromFlag;
   if (flags.yes || !process.stdin.isTTY) return [...ALL_TOOLS];
-  console.log(`\nWhich tools should follow the spec-driven SDLC?`);
-  console.log(`  1) Claude Code      (.claude/ — full, enforced via hooks) [always on]`);
+  console.log(`\nWhich tools should follow the spec-driven SDLC? (neutral core installs either way)`);
+  console.log(`  1) Claude Code      (.claude/ — full, enforced via hooks)`);
   console.log(`  2) Codex/Gemini/+   (AGENTS.md — broadest coverage)`);
   console.log(`  3) Cursor           (.cursor/rules/)`);
   console.log(`  4) Windsurf         (.windsurf/rules/)`);
   console.log(`  5) Antigravity      (AGENTS.md + .antigravity/)`);
   const ans = await prompt(`Enter numbers (comma-separated) or "all" [all]: `);
   if (!ans || ans.toLowerCase() === 'all') return [...ALL_TOOLS];
-  const pick = new Set(['claude']);
+  const pick = new Set();
   const byNum = { 1: 'claude', 2: 'codex', 3: 'cursor', 4: 'windsurf', 5: 'antigravity' };
   for (const n of ans.split(',').map((x) => x.trim())) if (byNum[n]) pick.add(byNum[n]);
   return [...pick];
@@ -190,31 +191,33 @@ async function init(flags) {
   info(`Tools: ${tools.join(', ')}`);
   if (dry) { warn('--dry-run: no files written.'); return; }
 
-  // 1. Claude Code layer (always) — copy .claude/, merging settings.json
-  const srcClaude = path.join(PKG_ROOT, '.claude');
-  const dstClaude = path.join(TARGET, '.claude');
-  const settingsPath = path.join(dstClaude, 'settings.json');
-  const hadSettings = exists(settingsPath);
-  const existingSettings = hadSettings ? JSON.parse(read(settingsPath)) : null;
-  copyDir(srcClaude, dstClaude, { force });
-  if (hadSettings) {
-    const ours = JSON.parse(read(path.join(srcClaude, 'settings.json')));
-    write(settingsPath, JSON.stringify(mergeSettings(ours, existingSettings), null, 2) + '\n');
-    ok('.claude/ installed (merged your existing settings.json)');
+  const hasClaude = tools.includes('claude');
+
+  // 1. Tool-neutral core (ALWAYS): sdlc/ = scripts + templates + PROCESS + SKILL.
+  copyDir(path.join(PKG_ROOT, 'sdlc'), path.join(TARGET, 'sdlc'), { force: true });
+  ok('sdlc/ installed (neutral core: scripts, templates, PROCESS, SKILL, patterns)');
+
+  // 2. Claude Code adapter — ONLY when selected (SDLC-001).
+  if (hasClaude) {
+    const srcClaude = path.join(PKG_ROOT, '.claude');
+    const dstClaude = path.join(TARGET, '.claude');
+    const settingsPath = path.join(dstClaude, 'settings.json');
+    const hadSettings = exists(settingsPath);
+    const existingSettings = hadSettings ? JSON.parse(read(settingsPath)) : null;
+    copyDir(srcClaude, dstClaude, { force });
+    if (hadSettings) {
+      const ours = JSON.parse(read(path.join(srcClaude, 'settings.json')));
+      write(settingsPath, JSON.stringify(mergeSettings(ours, existingSettings), null, 2) + '\n');
+      ok('.claude/ installed (merged your existing settings.json)');
+    } else {
+      ok('.claude/ installed (agents, skills, enforcing hooks)');
+    }
+    fillClaudeSpecifics(path.join(dstClaude, 'CLAUDE.md'), stack);
   } else {
-    ok('.claude/ installed (agents, skills, hooks, scripts)');
+    info('.claude/ skipped — Claude Code not selected (neutral core + adapters still installed)');
   }
 
-  // 2. Neutral core: sdlc/PROCESS.md + sdlc/templates/
-  write(path.join(TARGET, 'sdlc', 'PROCESS.md'), read(path.join(PKG_ROOT, 'templates', 'PROCESS.md')));
-  const srcTpl = path.join(srcClaude, 'skills', 'sdlc', 'templates');
-  copyDir(srcTpl, path.join(TARGET, 'sdlc', 'templates'), { force: true });
-  ok('sdlc/PROCESS.md + sdlc/templates/ installed (tool-neutral core)');
-
-  // 3. Project specifics into .claude/CLAUDE.md
-  fillClaudeSpecifics(path.join(dstClaude, 'CLAUDE.md'), stack);
-
-  // 4. Adapters per tool
+  // 3. Adapters per selected tool (stack filled in).
   const T = (f) => read(path.join(PKG_ROOT, 'templates', f));
   if (tools.includes('codex') || tools.includes('antigravity')) {
     writeIfOk(path.join(TARGET, 'AGENTS.md'), fill(T('AGENTS.md'), stack), force);
@@ -233,19 +236,24 @@ async function init(flags) {
     ok('.antigravity/rules/spec-sdlc.md written');
   }
 
-  // 5. make scripts executable (no-op on Windows)
+  // 4. make shell scripts executable (no-op on Windows).
   try {
-    for (const f of ['scripts/sdlc.sh', 'hooks/session-start.sh', 'hooks/guard-bash.sh',
-      'hooks/phase-gate.sh', 'hooks/format-lint.sh', 'hooks/quality-gate.sh', 'hooks/log-agent.sh']) {
-      const p = path.join(dstClaude, f);
-      if (exists(p)) fs.chmodSync(p, 0o755);
+    const sh = ['sdlc/scripts/sdlc.sh', 'sdlc/scripts/lib.sh'].map((f) => path.join(TARGET, f));
+    if (hasClaude) {
+      for (const f of ['scripts/sdlc.sh', 'hooks/lib.sh', 'hooks/session-start.sh', 'hooks/guard-bash.sh',
+        'hooks/phase-gate.sh', 'hooks/format-lint.sh', 'hooks/quality-gate.sh', 'hooks/log-agent.sh']) {
+        sh.push(path.join(TARGET, '.claude', f));
+      }
     }
+    for (const p of sh) if (exists(p)) fs.chmodSync(p, 0o755);
   } catch {}
 
   console.log(`\n${C.bold}Done.${C.reset} Next:`);
-  console.log(`  1. Check the stack details in ${C.cyan}.claude/CLAUDE.md${C.reset} / ${C.cyan}AGENTS.md${C.reset}.`);
-  console.log(`  2. ${C.dim}bash .claude/scripts/sdlc.sh doctor${C.reset}  (verify tooling)`);
-  console.log(`  3. In Claude Code: ${C.cyan}/sdlc <feature>${C.reset}. In other tools: just start — they read the adapter.`);
+  console.log(`  1. Read ${C.cyan}sdlc/PROCESS.md${C.reset}${hasClaude ? ` and ${C.cyan}.claude/CLAUDE.md${C.reset}` : ''}.`);
+  console.log(`  2. ${C.dim}bash sdlc/scripts/sdlc.sh doctor${C.reset}  (verify tooling)`);
+  console.log(hasClaude
+    ? `  3. In Claude Code: ${C.cyan}/sdlc <feature>${C.reset}.`
+    : `  3. Your tool reads its adapter; drive state with ${C.cyan}bash sdlc/scripts/sdlc.sh${C.reset}.`);
   if (!exists(path.join(TARGET, '.git'))) warn('Not a git repo — `git init` so the review/release phases can diff.');
 }
 

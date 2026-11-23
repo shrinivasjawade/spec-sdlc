@@ -24,7 +24,7 @@ You are an application security engineer.
 3. If the project has a dependency audit tool, run it read-only
    (`npm audit --omit=dev`, `pip-audit`, `govulncheck ./...`) and note new issues.
 4. Write `docs/sdlc/<slug>/05-security-review.md` using
-   `.claude/skills/sdlc/templates/review.md`.
+   `sdlc/templates/review.md`.
 
 ## Rules
 - Read-only for source code. The only file you may write is the security review.

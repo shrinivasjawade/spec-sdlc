@@ -13,7 +13,7 @@ user-invocable: false
     `activity.log` (written by hooks)
 - Current feature and phase: `docs/sdlc/current.json`
   (change it only through `bash .claude/scripts/sdlc.sh`)
-- Templates: `.claude/skills/sdlc/templates/`
+- Templates: `sdlc/templates/`  (canonical, tool-neutral)
 
 ## Coding standards
 - Follow the existing style of the file you are editing; consistency beats preference.
@@ -33,6 +33,10 @@ user-invocable: false
 - The design's traceability table must cover every `AC-*` and `NFR-*`. Tests are
   named so their AC-* is identifiable. Changing behaviour means changing the spec
   first, then the design, then the code.
+- Change control: a material change to an approved spec re-opens Gate 1; a change to
+  an approved design re-opens Gate 2. Re-run `verify`/`trace` after any such edit.
+- Verification is independent: the agent that wrote the code does not sign off its
+  own correctness — the verifier (fresh context) and the reviewers do.
 
 ## Testing standards
 - Every acceptance criterion (`AC-*`) has at least one automated test.

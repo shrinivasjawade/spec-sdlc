@@ -6,14 +6,25 @@
     "spec-sdlc-kit": "bin/cli.js"
   },
   "scripts": {
+    "test": "node test/run.js",
     "selftest": "node bin/cli.js detect && node bin/cli.js doctor"
   },
   "files": [
     "bin/",
+    "sdlc/",
     "templates/",
     ".claude/",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shrinivasjawade/spec-sdlc.git"
+  },
+  "bugs": {
+    "url": "https://github.com/shrinivasjawade/spec-sdlc/issues"
+  },
+  "homepage": "https://github.com/shrinivasjawade/spec-sdlc#readme",
   "keywords": [
     "sdlc",
     "spec-driven",

@@ -13,7 +13,7 @@ Follow `sdlc/PROCESS.md` for every feature.
 - **Implement** TDD (tests named after their `AC-*`) → **test → review**.
 - **Release:** notes only — never push, deploy or publish. **(Gate 3)**
 
-Templates: `sdlc/templates/`. State: `bash .claude/scripts/sdlc.sh status`.
+Templates: `sdlc/templates/`. State: `bash sdlc/scripts/sdlc.sh status`.
 
 ## Hard rules
 - Never edit `.env*`, keys, or lockfiles; never commit secrets.
