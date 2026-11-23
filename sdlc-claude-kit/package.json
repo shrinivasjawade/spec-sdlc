@@ -1,0 +1,33 @@
+{
+  "name": "spec-sdlc-kit",
+  "version": "0.1.0",
+  "description": "Spec-driven SDLC for any AI coding tool (Claude Code, Codex, Gemini, Cursor, Windsurf, Antigravity). npx-installable: specs with EARS + traceability, phase gates, and enforcing hooks for Claude Code.",
+  "bin": {
+    "spec-sdlc-kit": "bin/cli.js"
+  },
+  "scripts": {
+    "selftest": "node bin/cli.js detect && node bin/cli.js doctor"
+  },
+  "files": [
+    "bin/",
+    "templates/",
+    ".claude/",
+    "README.md"
+  ],
+  "keywords": [
+    "sdlc",
+    "spec-driven",
+    "ears",
+    "claude-code",
+    "codex",
+    "cursor",
+    "windsurf",
+    "antigravity",
+    "agents",
+    "ai-coding"
+  ],
+  "engines": {
+    "node": ">=16"
+  },
+  "license": "MIT"
+}

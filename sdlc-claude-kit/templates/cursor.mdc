@@ -1,0 +1,27 @@
+---
+description: Spec-driven SDLC workflow for this repo
+alwaysApply: true
+---
+
+# Spec-driven SDLC (Cursor)
+
+Follow the process in [sdlc/PROCESS.md](mdc:sdlc/PROCESS.md) for every feature.
+
+- **Spec first:** write `docs/sdlc/<slug>/01-requirements.md` with stable IDs
+  (`REQ-1`, `AC-1.1`, `NFR-1`) and EARS acceptance criteria ("WHEN … the system
+  SHALL …"). Get human approval. **(Gate 1)**
+- **Design:** write `docs/sdlc/<slug>/02-design.md` with an ordered task checklist
+  and a traceability table covering every `AC-*`/`NFR-*`. Get human approval. **(Gate 2)**
+- **Implement** with TDD, name tests after their `AC-*`, then **test → review**.
+- **Release:** prepare notes only. Never push, deploy or publish. **(Gate 3)**
+
+Templates live in `sdlc/templates/`. State: `bash .claude/scripts/sdlc.sh status`.
+
+## Hard rules
+- Never edit `.env*`, keys, or lockfiles; never commit secrets.
+- Never force-push, push to main/master, deploy, or publish.
+- No destructive SQL from the agent.
+- Change the spec before changing behaviour.
+
+## This project
+- Stack: {{STACK}} · Tests: {{TEST_CMD}} · Lint: {{LINT_CMD}}
