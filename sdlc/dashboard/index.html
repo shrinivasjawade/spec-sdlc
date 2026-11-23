@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SDLC Pipeline Map</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap">
+<style>
+/* Layout: a left-to-right pipeline of phase nodes joined by connectors and human
+   gates, a governance meter strip, and a slide-in detail panel. Stacks on phones. */
+:root{
+  --bg:#f4f6fb; --panel:#ffffff; --panel-2:#eef1f8; --ink:#1a2030; --muted:#5b6479;
+  --line:#d7dce8; --accent:#3b5bdb; --accent-soft:#e7ecfd;
+  --good:#1f9d57; --good-soft:#e3f4ea; --warn:#c7820a; --warn-soft:#fbf0d8;
+  --crit:#d64545; --crit-soft:#fbe4e4; --pending:#9aa2b4;
+  --shadow:0 1px 2px rgba(20,28,52,.06),0 8px 24px rgba(20,28,52,.08);
+  --font:"Inter",system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  --display:"Space Grotesk",var(--font);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0e1118; --panel:#161b26; --panel-2:#1d2330; --ink:#e8ebf2; --muted:#9aa4ba;
+  --line:#2a3242; --accent:#6d8bff; --accent-soft:#1b2640;
+  --good:#45c47d; --good-soft:#12301f; --warn:#e0a63a; --warn-soft:#332714;
+  --crit:#f07171; --crit-soft:#331818; --pending:#5b6479;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px rgba(0,0,0,.4); color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#0e1118; --panel:#161b26; --panel-2:#1d2330; --ink:#e8ebf2; --muted:#9aa4ba;
+  --line:#2a3242; --accent:#6d8bff; --accent-soft:#1b2640;
+  --good:#45c47d; --good-soft:#12301f; --warn:#e0a63a; --warn-soft:#332714;
+  --crit:#f07171; --crit-soft:#331818; --pending:#5b6479;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px rgba(0,0,0,.4); color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1180px;margin:0 auto;padding-block:28px 56px}
+h1{font-family:var(--display);font-weight:700;font-size:clamp(1.5rem,3.5vw,2.1rem);margin:0;letter-spacing:-.02em;text-wrap:balance}
+.sub{color:var(--muted);margin:.35rem 0 0;max-width:62ch}
+header.top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+.toggle{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;
+  padding:.5rem .9rem;font:inherit;font-size:.85rem;cursor:pointer;white-space:nowrap}
+.toggle:hover{border-color:var(--accent)}
+.status-banner{margin-top:18px;background:var(--panel);border:1px solid var(--line);border-radius:14px;
+  padding:14px 18px;box-shadow:var(--shadow);display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+.status-banner .feat{font-family:var(--display);font-weight:600;font-size:1.05rem}
+.status-banner .mode{color:var(--muted);font-size:.88rem}
+.chip{display:inline-flex;align-items:center;gap:.4rem;border-radius:999px;padding:.2rem .7rem;font-size:.78rem;font-weight:600}
+.chip .dot{width:.55rem;height:.55rem;border-radius:50%}
+.chip.active{background:var(--accent-soft);color:var(--accent)}
+.chip.active .dot{background:var(--accent)}
+
+/* Pipeline */
+.flow-scroll{margin-top:22px;overflow-x:auto;padding-bottom:8px}
+.flow{display:flex;align-items:stretch;gap:0;min-width:min-content}
+.node{flex:0 0 190px;background:var(--panel);border:1px solid var(--line);border-radius:16px;
+  box-shadow:var(--shadow);padding:0;cursor:pointer;text-align:left;font:inherit;color:inherit;
+  display:flex;flex-direction:column;overflow:hidden;transition:transform .12s,border-color .12s}
+.node:hover{transform:translateY(-3px);border-color:var(--accent)}
+.node:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.node .bar{height:5px;background:var(--pending)}
+.node.done .bar{background:var(--good)} .node.active .bar{background:var(--accent)}
+.node.blocked .bar{background:var(--crit)} .node.pending .bar{background:var(--pending)}
+.node .body{padding:13px 14px 15px;display:flex;flex-direction:column;gap:7px;height:100%}
+.node .idx{font-family:var(--display);font-size:.72rem;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
+.node .name{font-family:var(--display);font-weight:600;font-size:1.05rem;display:flex;align-items:center;gap:.5rem}
+.node .glyph{width:22px;height:22px;flex:0 0 22px;color:var(--accent)}
+.node .what{font-size:.82rem;color:var(--muted);flex:1}
+.node .art{font-size:.72rem;color:var(--ink);background:var(--panel-2);border-radius:7px;padding:.28rem .5rem;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.node .state{display:inline-flex;align-items:center;gap:.4rem;font-size:.74rem;font-weight:600}
+.node .state .dot{width:.55rem;height:.55rem;border-radius:50%}
+.done .state{color:var(--good)} .done .state .dot{background:var(--good)}
+.active .state{color:var(--accent)} .active .state .dot{background:var(--accent)}
+.pending .state{color:var(--pending)} .pending .state .dot{background:var(--pending)}
+.blocked .state{color:var(--crit)} .blocked .state .dot{background:var(--crit)}
+
+.conn{flex:0 0 54px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;position:relative}
+.conn .arrow{width:100%;height:2px;background:var(--line);position:relative}
+.conn .arrow::after{content:"";position:absolute;right:0;top:50%;transform:translateY(-50%);
+  border-left:7px solid var(--line);border-top:5px solid transparent;border-bottom:5px solid transparent}
+.gate{flex:0 0 88px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
+.gate .diamond{width:44px;height:44px;transform:rotate(45deg);background:var(--warn-soft);border:1.5px solid var(--warn);
+  border-radius:9px;display:flex;align-items:center;justify-content:center}
+.gate .diamond span{transform:rotate(-45deg);font-family:var(--display);font-weight:700;color:var(--warn);font-size:.95rem}
+.gate .glabel{font-size:.68rem;color:var(--warn);font-weight:600;text-align:center;letter-spacing:.03em;text-transform:uppercase}
+.gate.passed .diamond{background:var(--good-soft);border-color:var(--good)} .gate.passed .diamond span{color:var(--good)}
+.gate.passed .glabel{color:var(--good)}
+
+.loops{margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;color:var(--muted);font-size:.82rem}
+.loops .rtag{display:inline-flex;align-items:center;gap:.4rem;background:var(--crit-soft);color:var(--crit);
+  border-radius:999px;padding:.25rem .7rem;font-weight:600;font-size:.76rem}
+
+/* Governance meters */
+.gov{margin-top:34px}
+.gov h2,.legend h2,.story h2{font-family:var(--display);font-size:1.15rem;margin:0 0 4px}
+.gov .lead,.legend .lead{color:var(--muted);margin:0 0 14px;font-size:.9rem}
+.meters{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px}
+.meter{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:15px 16px;box-shadow:var(--shadow)}
+.meter .mh{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.meter .mt{font-weight:600;font-size:.9rem}
+.meter .mv{font-family:var(--display);font-weight:700;font-size:1.25rem;font-variant-numeric:tabular-nums}
+.meter .mdesc{color:var(--muted);font-size:.78rem;margin-top:2px}
+.track{height:8px;background:var(--panel-2);border-radius:999px;margin-top:12px;overflow:hidden}
+.track i{display:block;height:100%;border-radius:999px;background:var(--good);width:0;transition:width .6s ease}
+.meter.warn .track i{background:var(--warn)} .meter.crit .track i{background:var(--crit)}
+.gate-pill{margin-top:16px;display:inline-flex;align-items:center;gap:.6rem;border-radius:12px;padding:.6rem 1rem;
+  font-weight:600;font-family:var(--display)}
+.gate-pill.pass{background:var(--good-soft);color:var(--good)} .gate-pill.fail{background:var(--crit-soft);color:var(--crit)}
+
+.grid2{margin-top:34px;display:grid;grid-template-columns:1fr 1fr;gap:26px}
+@media (max-width:720px){.grid2{grid-template-columns:1fr}}
+.legend ul{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:9px}
+.legend li{display:flex;align-items:center;gap:.6rem;font-size:.88rem}
+.legend .sw{width:1rem;height:1rem;border-radius:5px;flex:0 0 1rem}
+.story p{margin:.4rem 0;color:var(--muted);font-size:.9rem}
+.story b{color:var(--ink)}
+
+/* Detail panel */
+.scrim{position:fixed;inset:0;background:rgba(10,14,22,.45);opacity:0;pointer-events:none;transition:opacity .2s;z-index:20}
+.scrim.open{opacity:1;pointer-events:auto}
+.panel{position:fixed;top:0;right:0;height:100%;width:min(420px,92vw);background:var(--panel);
+  border-left:1px solid var(--line);box-shadow:-10px 0 40px rgba(0,0,0,.2);transform:translateX(100%);
+  transition:transform .22s;z-index:21;display:flex;flex-direction:column;
+  padding:calc(env(safe-area-inset-top,0px) + 22px) max(20px,env(safe-area-inset-right,0px)) 24px 22px;overflow-y:auto}
+.panel.open{transform:translateX(0)}
+.panel .pclose{align-self:flex-end;border:none;background:var(--panel-2);color:var(--ink);border-radius:8px;
+  width:34px;height:34px;font-size:1.1rem;cursor:pointer}
+.panel h3{font-family:var(--display);font-size:1.3rem;margin:.2rem 0 .1rem}
+.panel .ptag{font-size:.78rem;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:.05em}
+.panel dl{margin:18px 0 0;display:flex;flex-direction:column;gap:14px}
+.panel dt{font-size:.74rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600}
+.panel dd{margin:.25rem 0 0;font-size:.92rem}
+.panel code{font-family:ui-monospace,Menlo,monospace;font-size:.82rem;background:var(--panel-2);
+  padding:.15rem .4rem;border-radius:6px;word-break:break-all}
+.foot{margin-top:40px;color:var(--muted);font-size:.8rem;border-top:1px solid var(--line);padding-top:16px}
+.foot code{font-family:ui-monospace,Menlo,monospace}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>SDLC Pipeline Map</h1>
+      <p class="sub">How a feature travels from an idea to a shipped change — six steps, three points where a human signs off, and the quality checks in between. Click any step to see what happens there.</p>
+    </div>
+    <button class="toggle" id="themeBtn" type="button">Toggle theme</button>
+  </header>
+
+  <div class="status-banner" id="banner">
+    <span class="feat" id="featName">No feature loaded</span>
+    <span class="chip active"><span class="dot"></span><span id="phaseName">showing the general map</span></span>
+    <span class="mode" id="modeNote">This is the template view. Run <code>sdlc/scripts/sdlc.sh dashboard</code> to overlay a real feature's live status.</span>
+  </div>
+
+  <div class="flow-scroll">
+    <div class="flow" id="flow"></div>
+  </div>
+  <div class="loops">
+    <span>Fix loops send work back a step:</span>
+    <span class="rtag">Test → Implement</span>
+    <span class="rtag">Review → Implement</span>
+  </div>
+
+  <section class="gov">
+    <h2>Governance scorecard</h2>
+    <p class="lead">Quality is measured, not assumed. These update when a real feature is loaded.</p>
+    <div class="meters" id="meters"></div>
+    <div id="gatePill" class="gate-pill fail">Release gate: not evaluated</div>
+  </section>
+
+  <div class="grid2">
+    <section class="legend">
+      <h2>How to read this</h2>
+      <p class="lead">Colours tell you where things stand at a glance.</p>
+      <ul>
+        <li><span class="sw" style="background:var(--good)"></span> <b>Done</b> — finished and approved</li>
+        <li><span class="sw" style="background:var(--accent)"></span> <b>Active</b> — happening now</li>
+        <li><span class="sw" style="background:var(--pending)"></span> <b>Pending</b> — not started yet</li>
+        <li><span class="sw" style="background:var(--crit)"></span> <b>Blocked</b> — needs a fix before moving on</li>
+        <li><span class="sw" style="background:var(--warn)"></span> <b>Gate</b> — a human approves before the pipeline continues</li>
+      </ul>
+    </section>
+    <section class="story">
+      <h2>Why it's built this way</h2>
+      <p>The <b>spec</b> is the single source of truth. Nothing gets built or tested that isn't written as a numbered, testable rule first.</p>
+      <p>Every rule is <b>traced</b> to a task and a test, so coverage is provable — not a guess.</p>
+      <p>An <b>independent reviewer</b> checks the work with fresh eyes, and <b>a human always ships</b> — the agent never pushes or deploys on its own.</p>
+    </section>
+  </div>
+
+  <p class="foot">Edit this file at <code>sdlc/dashboard/index.html</code> — it ships with the kit and opens in any browser. The live view is generated by <code>sdlc/scripts/sdlc.sh dashboard &lt;feature&gt;</code>.</p>
+</div>
+
+<div class="scrim" id="scrim"></div>
+<aside class="panel" id="panel" aria-hidden="true">
+  <button class="pclose" id="pclose" type="button" aria-label="Close">×</button>
+  <span class="ptag" id="pTag"></span>
+  <h3 id="pName"></h3>
+  <dl id="pBody"></dl>
+</aside>
+
+<script>
+// Replaced by `sdlc.sh dashboard` with a live feature snapshot. null = generic map.
+window.SDLC_STATE = null; /*__SDLC_STATE__*/
+
+const PHASES = [
+  { key:"requirements", name:"Spec", artifact:"01-requirements.md", owner:"Product owner",
+    what:"Write down what we're building and why — as numbered, testable rules (EARS).",
+    detail:"Capture the requirements as stable IDs (REQ-1, AC-1.1, NFR-1) with acceptance criteria in plain 'WHEN… the system SHALL…' form. This is the source of truth; everything later traces back to it.",
+    cmd:"sdlc/scripts/sdlc.sh start <slug>", gateAfter:"1" },
+  { key:"design", name:"Design", artifact:"02-design.md", owner:"Architect",
+    what:"Plan how to build it and break it into ordered tasks — mapping every rule to a task.",
+    detail:"Produce a change plan and a task checklist, plus a traceability table covering every AC/NFR. Validate it with `verify` before the gate.",
+    cmd:"sdlc/scripts/sdlc.sh verify <slug>", gateAfter:"2" },
+  { key:"implement", name:"Implement", artifact:"code + ticked tasks",
+    owner:"Engineer",
+    what:"Build it task by task, writing a test for each rule before the code (TDD).",
+    detail:"Each task names the AC it covers; tests are named after their AC. A quality gate blocks finishing while tests fail.",
+    cmd:"(developer subagent)", gateAfter:null },
+  { key:"test", name:"Test", artifact:"03-test-report.md", owner:"QA",
+    what:"Check every rule has a real test and hunt for edge cases.",
+    detail:"Build a test matrix keyed by requirement ID; add missing edge-case tests. Bugs loop back to Implement.",
+    cmd:"(qa-engineer subagent)", gateAfter:null },
+  { key:"review", name:"Review", artifact:"04/05 + verifier", owner:"Reviewers",
+    what:"Independent check: correctness, security, and a fresh-eyes match against the spec.",
+    detail:"Code review + security audit + an independent verifier (fresh context) run in parallel. Critical/High findings loop back to Implement.",
+    cmd:"sdlc/scripts/sdlc.sh metrics <slug>", gateAfter:null },
+  { key:"release", name:"Release", artifact:"06-release-notes.md", owner:"Release manager",
+    what:"Write the notes, changelog and PR text. A human ships — never the agent.",
+    detail:"The release gate requires Spec Fidelity 100% and no open questions. The kit prepares everything; a person runs the push/deploy.",
+    cmd:"sdlc/scripts/sdlc.sh metrics <slug>", gateBefore:"3" }
+];
+
+const GLYPHS = {
+  requirements:'<path d="M5 3h9l5 5v13H5z" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M14 3v5h5M8 13h8M8 17h8" fill="none" stroke="currentColor" stroke-width="1.6"/>',
+  design:'<rect x="3" y="4" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3 9h18M9 9v11" stroke="currentColor" stroke-width="1.6"/>',
+  implement:'<path d="M8 8l-4 4 4 4M16 8l4 4-4 4M13 6l-2 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>',
+  test:'<path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>',
+  review:'<circle cx="11" cy="11" r="6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M16 16l4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
+  release:'<path d="M12 3c3 2 5 5 5 9l-5 3-5-3c0-4 2-7 5-9z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M7 16l-2 5 5-2M17 16l2 5-5-2" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" fill="none"/>'
+};
+
+const st = window.SDLC_STATE;
+const order = PHASES.map(p=>p.key);
+const curIdx = st ? Math.max(0, order.indexOf(st.phase)) : -1;
+
+function statusFor(i){
+  if(!st) return i===0 ? "active" : "pending";       // template: show step 1 as active
+  if(st.blocked && i===curIdx) return "blocked";
+  if(i<curIdx) return "done";
+  if(i===curIdx) return "active";
+  return "pending";
+}
+
+const flow = document.getElementById("flow");
+PHASES.forEach((p,i)=>{
+  if(p.gateBefore) flow.appendChild(gateEl(p.gateBefore, st && curIdx>=i));
+  flow.appendChild(nodeEl(p,i));
+  if(p.gateAfter) flow.appendChild(gateEl(p.gateAfter, st && curIdx> i));
+  else if(i<PHASES.length-1 && !PHASES[i+1].gateBefore) flow.appendChild(connEl());
+});
+
+function connEl(){const d=document.createElement("div");d.className="conn";d.innerHTML='<div class="arrow"></div>';return d;}
+function gateEl(n,passed){
+  const d=document.createElement("div");d.className="gate"+(passed?" passed":"");
+  d.innerHTML=`<div class="diamond"><span>G${n}</span></div><div class="glabel">Gate ${n}<br>human</div>`;
+  return d;
+}
+function nodeEl(p,i){
+  const s=statusFor(i);
+  const b=document.createElement("button");b.className="node "+s;b.type="button";
+  const label = s==="done"?"Done":s==="active"?"Active now":s==="blocked"?"Blocked":"Pending";
+  b.innerHTML=`<div class="bar"></div><div class="body">
+    <div class="idx">Step ${i+1}</div>
+    <div class="name"><svg class="glyph" viewBox="0 0 24 24">${GLYPHS[p.key]||""}</svg>${p.name}</div>
+    <div class="what">${p.what}</div>
+    <div class="art">${p.artifact}</div>
+    <div class="state"><span class="dot"></span>${label}</div></div>`;
+  b.addEventListener("click",()=>openPanel(p,i,label));
+  return b;
+}
+
+// Governance meters
+const meters = document.getElementById("meters");
+const m = (st&&st.metrics)||{};
+function meter(title,val,desc,pct,level){
+  const el=document.createElement("div");el.className="meter"+(level?(" "+level):"");
+  el.innerHTML=`<div class="mh"><span class="mt">${title}</span><span class="mv">${val}</span></div>
+    <div class="mdesc">${desc}</div><div class="track"><i style="width:0"></i></div>`;
+  meters.appendChild(el);
+  requestAnimationFrame(()=>{el.querySelector("i").style.width=Math.max(0,Math.min(100,pct))+"%";});
+}
+const have = !!st;
+meter("Spec Fidelity", have?(m.fidelity_pct+"%"):"—",
+  "Rules mapped to a task in the design", have?m.fidelity_pct:0,
+  have?(m.fidelity_pct>=100?"":"warn"):"");
+meter("AC Test Coverage", have?(m.ac_pct+"%"):"—",
+  "Acceptance criteria that have a test", have?m.ac_pct:0,
+  have?(m.ac_pct>=100?"":"warn"):"");
+meter("Task Completion", have?(m.tci_pct+"%"):"—",
+  "Build tasks ticked off", have?m.tci_pct:0,"");
+meter("Ambiguity Tax", have?String(m.ambiguity):"—",
+  "Open questions + vague terms (lower is better)", have?(m.ambiguity>0?60:0):0,
+  have?(m.ambiguity>0?"warn":""):"");
+
+const gp=document.getElementById("gatePill");
+if(have){const pass=m.gate==="PASS";gp.className="gate-pill "+(pass?"pass":"fail");
+  gp.textContent="Release gate: "+(pass?"PASS — ready for a human to ship":"FAIL — resolve before release");}
+
+// Banner
+if(st){
+  document.getElementById("featName").textContent=st.feature||"feature";
+  document.getElementById("phaseName").textContent=(st.blocked?"blocked in ":"in ")+(PHASES[curIdx]?PHASES[curIdx].name:st.phase)+" phase";
+  const note=document.getElementById("modeNote");
+  note.textContent = (st.tasks? (st.tasks.done+"/"+(st.tasks.done+st.tasks.open)+" tasks done · ") : "")
+    + (st.trace? (st.trace.covered+"/"+st.trace.total+" rules traced · ") : "")
+    + (st.generated? ("snapshot "+st.generated) : "");
+}
+
+// Detail panel
+const scrim=document.getElementById("scrim"),panel=document.getElementById("panel");
+function openPanel(p,i,label){
+  document.getElementById("pTag").textContent="Step "+(i+1)+" · "+label;
+  document.getElementById("pName").textContent=p.name;
+  document.getElementById("pBody").innerHTML=
+    `<div><dt>What happens</dt><dd>${p.detail}</dd></div>
+     <div><dt>Produces</dt><dd><code>${p.artifact}</code></dd></div>
+     <div><dt>Accountable</dt><dd>${p.owner}</dd></div>
+     <div><dt>Command</dt><dd><code>${p.cmd}</code></dd></div>`;
+  scrim.classList.add("open");panel.classList.add("open");panel.setAttribute("aria-hidden","false");
+}
+function closePanel(){scrim.classList.remove("open");panel.classList.remove("open");panel.setAttribute("aria-hidden","true");}
+scrim.addEventListener("click",closePanel);
+document.getElementById("pclose").addEventListener("click",closePanel);
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closePanel();});
+
+// Theme toggle
+const root=document.documentElement,tb=document.getElementById("themeBtn");
+let saved=null;try{saved=localStorage.getItem("sdlc-theme");}catch(e){}
+if(saved)root.setAttribute("data-theme",saved);
+tb.addEventListener("click",()=>{
+  const dark=matchMedia("(prefers-color-scheme:dark)").matches;
+  const cur=root.getAttribute("data-theme")||(dark?"dark":"light");
+  const next=cur==="dark"?"light":"dark";
+  root.setAttribute("data-theme",next);
+  try{localStorage.setItem("sdlc-theme",next);}catch(e){}
+});
+</script>
+</body>
+</html>
